@@ -99,7 +99,7 @@ export const knowledgeBase = resolveai.table(
     chunkId: integer("chunk_id").notNull(),
     title: text("title").notNull().default(""),
     content: text("content").notNull(),
-    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    embedding: vector("embedding", { dimensions: 3072 }).notNull(),
     metadata: jsonb("metadata").notNull(),
     score: integer("score").default(0),
     accessCount: integer("access_count").default(0),
@@ -123,6 +123,25 @@ export const knowledgeBase = resolveai.table(
     ),
     uniqueIndex("idx_kb_content_hash").on(t.contentHash),
     index("idx_kb_metadata").using("gin", t.metadata),
+  ],
+);
+export const files = resolveai.table(
+  "files",
+  {
+    id: uuid("id").default(sql`gen_random_uuid()`).primaryKey().notNull(),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    filename: varchar("filename", { length: 256 }).notNull(),
+    originalFilename: varchar("original_filename", { length: 256 }).notNull(),
+    mimetype: varchar("mimetype", { length: 128 }).notNull(),
+    size: integer("size").notNull(),
+    url: text("url").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, precision: 3 })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("idx_files_user").on(t.userId),
+    index("idx_files_created").on(t.createdAt),
   ],
 );
 

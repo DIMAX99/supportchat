@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export default function KnowledgeBasePage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -13,6 +19,53 @@ export default function KnowledgeBasePage() {
       router.push("/login");
     }
   }, [router]);
+
+  const handlePdfUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+
+    setUploadError("");
+    setUploadMessage("");
+
+    if (!selectedFile) {
+      return;
+    }
+
+    const isPdf =
+      selectedFile.type === "application/pdf" ||
+      selectedFile.name.toLowerCase().endsWith(".pdf");
+
+    if (!isPdf) {
+      setUploadError("Only PDF files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch(`${API_BASE_URL}/api/file/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = (await response.json()) as { message?: string; error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      setUploadMessage(data.message || "PDF uploaded successfully.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed";
+      setUploadError(message);
+    } finally {
+      setIsUploading(false);
+      event.target.value = "";
+    }
+  };
 
   return (
     <main className="min-h-screen bg-stone-50">
@@ -67,13 +120,27 @@ export default function KnowledgeBasePage() {
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <button className="flex items-start gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 text-left transition hover:border-amber-300 hover:bg-amber-50">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-start gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 text-left transition hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
                 <span className="text-xl" aria-hidden="true">📄</span>
                 <div>
-                  <p className="font-semibold text-stone-900">Upload File</p>
-                  <p className="mt-1 text-sm text-stone-600">Import PDFs, docs, or text files.</p>
+                  <p className="font-semibold text-stone-900">Upload PDF</p>
+                  <p className="mt-1 text-sm text-stone-600">
+                    {isUploading ? "Uploading..." : "Upload a PDF to MinIO via backend route."}
+                  </p>
                 </div>
               </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+              />
 
               <button className="flex items-start gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 text-left transition hover:border-amber-300 hover:bg-amber-50">
                 <span className="text-xl" aria-hidden="true">🌐</span>
@@ -94,6 +161,18 @@ export default function KnowledgeBasePage() {
           </div>
 
           <div className="mt-8 rounded-lg border border-stone-200 bg-white p-6">
+            {uploadMessage ? (
+              <p className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {uploadMessage}
+              </p>
+            ) : null}
+
+            {uploadError ? (
+              <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {uploadError}
+              </p>
+            ) : null}
+
             <p className="text-stone-600">No articles yet. Create your first knowledge base article to get started.</p>
           </div>
         </section>
