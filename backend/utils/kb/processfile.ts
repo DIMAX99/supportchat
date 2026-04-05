@@ -34,7 +34,7 @@ export async function parsePDF(buffer: Buffer) {
     await parser.destroy();
   }
 }
-export function chunkText(text: string, chunkSize = 500, overlap = 100) {
+export function chunkText(text: string, chunkSize = 2000, overlap = 100) {
   const chunks = [];
 
   for (let i = 0; i < text.length; i += chunkSize - overlap) {

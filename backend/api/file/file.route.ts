@@ -40,11 +40,11 @@ fileRouter.post("/upload", upload.single("file"), async (req, res) => {
         mimetype: file.mimetype,
         size: file.size,
         url: `http://localhost:9000/resolveai/${file.originalname}`,
-    });
+    }).returning({id:files.id});
     if(insetfile){
         console.log("file metadata inserted into database");
     }
-    processPDF(file.originalname,"123344");
+    processPDF(file.originalname,insetfile[0]!.id);
     return res.status(200).json({ message: "Upload and Scan successful" });
   } catch (err) {
     console.error(err);
